@@ -56,6 +56,9 @@ int pin_Front_Right = 3; // this is the output of the arduino
 int pin_Rear_Left = 4; // this is the output of the arduino
 int pin_Rear_Right = 5; // this is the output of the arduino
 
+int led = 7;
+
+
 int potValue; // the potentiometer value
 
 int maxJoystickInfluence = 20; // the maximum influnce the joystick has over the motors . // must be lower than 180 // the higher this is , the more the drone will be able to tilt
@@ -80,6 +83,7 @@ void setup()
   radio.setPALevel(RF24_PA_HIGH);
   radio.startListening(); //start the radio comunication for receiver | Alıcı olarak sinyal iletişimi başlatılıyor
   pinMode(6,OUTPUT);
+  pinMode(led,OUTPUT);
 
 
   //drone 
@@ -94,10 +98,12 @@ void setup()
 unsigned long lastRecvTime = 0;
 void recvData()
 {
-  while ( radio.available() ) {
+  while ( radio.available() ) 
     //Serial.print("available");
   radio.read(&data, sizeof(Signal));
   lastRecvTime = millis();   // receive the data | data alınıyor
+  //led 
+  digitalWrite(led,HIGH);
   }
 }
 
@@ -108,12 +114,12 @@ void loop()
   if ( now - lastRecvTime > 1000 ) {
   ResetData(); // Signal lost.. Reset data | Sinyal kayıpsa data resetleniyor
   }
-  ch_width_4 = map(data.yaw,      0, 255, 1000, 2000);     // pin D5 (PWM signal)
-  ch_width_2 = map(data.pitch,    0, 255, 1000, 2000);     // pin D3 (PWM signal)
-  ch_width_3 = map(data.throttle, 0, 255, 1000, 2000);     // pin D4 (PWM signal)
-  ch_width_1 = map(data.roll,     0, 255, 1000, 2000);     // pin D2 (PWM signal)
-  ch_width_5 = map(data.aux1,     0, 255, 1000, 2000);     // pin D6 (PWM signal)
-  ch_width_6 = map(data.aux2,     0, 255, 1000, 2000);     // pin D7 (PWM signal)
+  ch_width_4 = map(data.yaw,      15, 255, 990, 2000);     // pin D5 (PWM signal)
+  ch_width_2 = map(data.pitch,    15, 255, 990, 2000);     // pin D3 (PWM signal)
+  ch_width_3 = map(data.throttle, 15, 255, 990, 2000);     // pin D4 (PWM signal)
+  ch_width_1 = map(data.roll,     15, 255, 990, 2000);     // pin D2 (PWM signal)
+  ch_width_5 = map(data.aux1,     15, 255, 990, 2000);     // pin D6 (PWM signal)
+  ch_width_6 = map(data.aux2,     15, 255, 990, 2000);     // pin D7 (PWM signal)
   // Write the PWM signal | PWM sinyaller çıkışlara gönderiliyor
 //  ch1.writeMicroseconds(ch_width_1);
 //  ch2.writeMicroseconds(ch_width_2);
@@ -134,6 +140,7 @@ void loop()
   int xValue = map(data.roll, 0, 255, -maxJoystickInfluence, maxJoystickInfluence);   // scale it to use it with the servo library (value between 0 and 180)
   int yValue = map(data.pitch, 0, 255, maxJoystickInfluence, -maxJoystickInfluence);   // scale it to use it with the servo library (value between 0 and 180)
 
+  if(potValue>1100){
   if(xValue < 0)
   {
     speed_Front_Left += xValue;
@@ -155,12 +162,12 @@ void loop()
     speed_Rear_Left += yValue;
     speed_Rear_Right += yValue;
   }
+  }
 
-
-//  esc_Front_Left.write(speed_Front_Left);    // Send the signal to the ESC
-//  esc_Front_Right.write(speed_Front_Right);    // Send the signal to the ESC
-//  esc_Rear_Left.write(speed_Rear_Left);    // Send the signal to the ESC
-//  esc_Rear_Right.write(speed_Rear_Right);    // Send the signal to the ESC
+  esc_Front_Left.writeMicroseconds(speed_Front_Left);    // Send the signal to the ESC
+  esc_Front_Right.writeMicroseconds(speed_Front_Right);    // Send the signal to the ESC
+  esc_Rear_Left.writeMicroseconds(speed_Rear_Left);    // Send the signal to the ESC
+  esc_Rear_Right.writeMicroseconds(speed_Rear_Right);    // Send the signal to the ESC
 
   //end drone
 
