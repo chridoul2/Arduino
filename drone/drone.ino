@@ -147,12 +147,14 @@ void setup()
 unsigned long lastRecvTime = 0;
 void recvData()
 {
-  while ( radio.available() ) 
+  while ( radio.available() ) {
     //Serial.print("available");
   radio.read(&data, sizeof(Signal));
   lastRecvTime = millis();   // receive the data | data alınıyor
   //led 
-  digitalWrite(led,HIGH);
+  if(radio.available()){
+    digitalWrite(led,HIGH);}
+  }
   }
 
 
@@ -177,8 +179,10 @@ void loop()
 //  ch5.writeMicroseconds(ch_width_5);
 //  ch6.writeMicroseconds(ch_width_6);
 
+
+  
   //drone 
-   potValue = map(data.throttle, 0 ,255, 1000, 2000);
+   potValue = map(data.throttle, 0 ,255, 1000, 1900);
 
   int speed_Front_Left = potValue;
   int speed_Front_Right = potValue;
@@ -186,7 +190,7 @@ void loop()
   int speed_Rear_Right = potValue;  
   
   
-  int xValue = map(data.roll, 0, 255, -maxJoystickInfluence, maxJoystickInfluence);   // scale it to use it with the servo library (value between 0 and 180)
+  int xValue = map(data.roll, 255, 0, -maxJoystickInfluence, maxJoystickInfluence);   // scale it to use it with the servo library (value between 0 and 180)
   int yValue = map(data.pitch, 0, 255, maxJoystickInfluence, -maxJoystickInfluence);   // scale it to use it with the servo library (value between 0 and 180)
 
   if(potValue>1100){
@@ -221,6 +225,21 @@ void loop()
   //end drone
 
 
+//  Serial.print("data.throttle: ");
+//  Serial.print(data.throttle);
+//  Serial.print("\t");
+//  Serial.print("speed_Front_Right: ");
+//  Serial.print(speed_Front_Right);
+//  Serial.print("\t");
+//  Serial.print("speed_Rear_Left: ");
+//  Serial.print(speed_Rear_Left);
+//  Serial.print("\t");
+//  Serial.print("speed_Rear_Right: ");
+//  Serial.print(speed_Rear_Right);
+//  Serial.print("\n");
+
+
+
   //Gyro
    // === Read acceleromter data === //
   Wire.beginTransmission(MPU);
@@ -246,47 +265,78 @@ void loop()
   GyroY = (Wire.read() << 8 | Wire.read()) / 131.0;
   GyroZ = (Wire.read() << 8 | Wire.read()) / 131.0;
   // Correct the outputs with the calculated error values
-  GyroX = GyroX + 0.56; // GyroErrorX ~(-0.56)
-  GyroY = GyroY - 2; // GyroErrorY ~(2)
-  GyroZ = GyroZ + 0.79; // GyroErrorZ ~ (-0.8)
+  //GyroX = GyroX - 2.16 ; // GyroErrorX ~(-0.56)
+  //GyroY = GyroY + 1.18; // GyroErrorY ~(2)
+  //GyroZ = GyroZ + 1.18; // GyroErrorZ ~ (-0.8)
+
+ 
+
+  
+  
+  
   // Currently the raw values are in degrees per seconds, deg/s, so we need to multiply by sendonds (s) to get the angle in degrees
+//  if(GyroX*elapsedTime> 0.5 || GyroX*elapsedTime< -0.5)
+//    gyroAngleX = gyroAngleX + GyroX * elapsedTime; // deg/s * s = deg
+//  if(GyroY*elapsedTime> 0.5 || GyroY*elapsedTime< -0.5)
+//     gyroAngleY = gyroAngleY + GyroY * elapsedTime;
+
+//   timer = 0;
+//   if(timer > 
+  
+//    Serial.print("GyroX: ");
+//  Serial.print(GyroX);
+//  Serial.print("\t");
+//   Serial.print("GyroY: ");
+//  Serial.print(GyroY);
+//   Serial.print("\t");
+//    Serial.print(elapsedTime);
+//   Serial.print("\t");
+
+     
+
+  
   gyroAngleX = gyroAngleX + GyroX * elapsedTime; // deg/s * s = deg
   gyroAngleY = gyroAngleY + GyroY * elapsedTime;
+//  gyroAngleX = GyroX * elapsedTime; // deg/s * s = deg
+//  gyroAngleY = GyroY * elapsedTime;
+
+ 
+  
   yaw =  yaw + GyroZ * elapsedTime;
   // Complementary filter - combine acceleromter and gyro angle values
-  //roll = 0.96 * gyroAngleX + 0.04 * accAngleX -AccErrorX;
-  //pitch = 0.96 * gyroAngleY + 0.04 * accAngleY - AccErrorY;
-  roll = 1 * gyroAngleX  -AccErrorX;
-  pitch = 1 * gyroAngleY  - AccErrorY;
+  roll = 0.96 * gyroAngleX + 0.04 * (accAngleX -AccErrorX);
+  pitch = 0.96 * gyroAngleY + 0.04 * (accAngleY - AccErrorY);
+//  roll = 1 * gyroAngleX  ;
+//  pitch = 1 * gyroAngleY  ;
   
   //roll = AccErrorX;
   //pitch = AccErrorY;
   // Print the values on the serial monitor
-   Serial.print("roll: ");
-  Serial.print(roll);
-  Serial.print("\t");
-   Serial.print("pitch: ");
-  Serial.print(pitch);
-   Serial.print("\t");
-  Serial.print("yaw: ");
-  Serial.println(yaw);
+//   Serial.print("roll: ");
+//  Serial.print(roll);
+//  Serial.print("\t");
+//   Serial.print("pitch: ");
+//  Serial.print(pitch);
+//   Serial.print("\t");
+//  Serial.print("yaw: ");
+//  Serial.println(yaw);
   //end gyro
 
 
   
   
-//  Serial.print("speed_Front_Left: ");
-//  Serial.print(speed_Front_Left);
-//  Serial.print("\t");
-//  Serial.print("speed_Front_Right: ");
-//  Serial.print(speed_Front_Right);
-//  Serial.print("\t");
-//  Serial.print("speed_Rear_Left: ");
-//  Serial.print(speed_Rear_Left);
-//  Serial.print("\t");
-//  Serial.print("speed_Rear_Right: ");
-//  Serial.print(speed_Rear_Right);
-//  Serial.print("\n");
+  Serial.print("speed_Front_Left: ");
+  Serial.print(speed_Front_Left);
+  Serial.print("\t");
+  Serial.print("speed_Front_Right: ");
+  Serial.print(speed_Front_Right);
+  Serial.print("\t");
+  Serial.print("speed_Rear_Left: ");
+  Serial.print(speed_Rear_Left);
+  Serial.print("\t");
+  Serial.print("speed_Rear_Right: ");
+  Serial.print(speed_Rear_Right);
+  Serial.print("\n");
 
 
 
@@ -307,8 +357,8 @@ void calculate_IMU_error() {
     AccY = (Wire.read() << 8 | Wire.read()) / 16384.0 ;
     AccZ = (Wire.read() << 8 | Wire.read()) / 16384.0 ;
     // Sum all readings
-    AccErrorX = AccErrorX + ((atan((AccY) / sqrt(pow((AccX), 2) + pow((AccZ), 2))) * 180 / PI));
-    AccErrorY = AccErrorY + ((atan(-1 * (AccX) / sqrt(pow((AccY), 2) + pow((AccZ), 2))) * 180 / PI));
+    AccErrorX =  ((atan((AccY) / sqrt(pow((AccX), 2) + pow((AccZ), 2))) * 180 / PI));
+    AccErrorY = ((atan(-1 * (AccX) / sqrt(pow((AccY), 2) + pow((AccZ), 2))) * 180 / PI));
     c++;
   }
   //Divide the sum by 200 to get the error value

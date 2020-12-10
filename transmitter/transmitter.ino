@@ -50,12 +50,12 @@
 {
   // Control Stick Calibration | Kumanda Kol Kalibrasyonları
   // Setting may be required for the correct values of the control levers. | :Kontrol kolların doğru değerleri için ayar gerekebilir.
-  data.throttle = mapJoystickValues( analogRead(A0), 12, 524, 1020, true );  // "true" or "false" for signal direction | "true" veya "false" sinyal yönünü belirler
-  data.roll = mapJoystickValues( analogRead(A3), 12, 524, 1020, true );      // "true" or "false" for servo direction | "true" veya "false" servo yönünü belirler
-  data.pitch = mapJoystickValues( analogRead(A2), 12, 524, 1020, false );     // "true" or "false" for servo direction | "true" veya "false" servo yönünü belirler
-  data.yaw = mapJoystickValues( analogRead(A1), 12, 524, 1020, false );       // "true" or "false" for servo direction | "true" veya "false" servo yönünü belirler
-  data.aux1 = mapJoystickValues( analogRead(A6), 12, 524, 1020, true );     // "true" or "false" for servo direction | "true" veya "false" servo yönünü belirler
-  data.aux2 = mapJoystickValues( analogRead(A7), 12, 524, 1020, true );     // "true" or "false" for servo direction | "true" veya "false" servo yönünü belirler
+  data.throttle = mapJoystickValues( analogRead(A2), 12, 524, 1020, true );  // "true" or "false" for signal direction | "true" veya "false" sinyal yönünü belirler
+  data.roll = mapJoystickValues( analogRead(A1), 12, 524, 1020, true );      // "true" or "false" for servo direction | "true" veya "false" servo yönünü belirler
+  data.pitch = mapJoystickValues( analogRead(A0), 12, 524, 1020, false );     // "true" or "false" for servo direction | "true" veya "false" servo yönünü belirler
+  data.yaw = mapJoystickValues( analogRead(A3), 12, 524, 1020, false );       // "true" or "false" for servo direction | "true" veya "false" servo yönünü belirler
+//  data.aux1 = mapJoystickValues( analogRead(A6), 12, 524, 1020, true );     // "true" or "false" for servo direction | "true" veya "false" servo yönünü belirler
+//  data.aux2 = mapJoystickValues( analogRead(A7), 12, 524, 1020, true );     // "true" or "false" for servo direction | "true" veya "false" servo yönünü belirler
   radio.write(&data, sizeof(Signal));
 
 
