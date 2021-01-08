@@ -53,19 +53,12 @@ Servo esc_Rear_Right;
 unsigned long counter_1, counter_2, counter_3, counter_4, current_count;
 
 
-byte last_CH1_state, last_CH2_state, last_CH3_state, last_CH4_state;
-
-
-
 //int pin_Front_Left = 2; // this is the output of the arduino
 //int pin_Front_Right = 3; // this is the output of the arduino
 //int pin_Rear_Left = 4; // this is the output of the arduino
 //int pin_Rear_Right = 5; // this is the output of the arduino
 
-int input_YAW;      //In my case channel 4 of the receiver and pin D12 of arduino
-int input_PITCH;    //In my case channel 2 of the receiver and pin D9 of arduino
-int input_ROLL;     //In my case channel 1 of the receiver and pin D8 of arduino
-int input_THROTTLE;
+
 
 
 
@@ -94,7 +87,7 @@ float Total_angle_x, Total_angle_y;
 
 //More variables for the code
 int i;
-int mot_activated=0;
+int armed=0;
 long activate_count=0;
 long des_activate_count=0;
 
@@ -161,10 +154,10 @@ void setup()
   
   /*in order to make sure that the ESCs won't enter into config mode
   *I send a 1000us pulse to each ESC.*/
-  //esc_Front_Left.writeMicroseconds(1000); 
-//  esc_Front_Right.writeMicroseconds(1000);
-//  esc_Rear_Left.writeMicroseconds(1000); 
-//  esc_Rear_Right.writeMicroseconds(1000);
+  esc_Front_Left.writeMicroseconds(1000); 
+  esc_Front_Right.writeMicroseconds(1000);
+  esc_Rear_Left.writeMicroseconds(1000); 
+  esc_Rear_Right.writeMicroseconds(1000);
   
   //  end drone
 
@@ -271,12 +264,12 @@ void recvData()
     if (radio.available()) {
       digitalWrite(7, HIGH);
     }
-//    else{
-//      esc_Front_Left.writeMicroseconds(1000);    // Send the signal to the ESC
-//  esc_Front_Right.writeMicroseconds(1000);    // Send the signal to the ESC
-//  esc_Rear_Left.writeMicroseconds(1000);    // Send the signal to the ESC
-//  esc_Rear_Right.writeMicroseconds(1000);    // Send the signal to the ESC
-//  }
+    else{
+      esc_Front_Left.writeMicroseconds(1000);    // Send the signal to the ESC
+  esc_Front_Right.writeMicroseconds(1000);    // Send the signal to the ESC
+  esc_Rear_Left.writeMicroseconds(1000);    // Send the signal to the ESC
+  esc_Rear_Right.writeMicroseconds(1000);    // Send the signal to the ESC
+  }
     
   }
 }
@@ -294,26 +287,17 @@ void loop()
   if ( now - lastRecvTime > 1000 ) {
     ResetData(); // Signal lost.. Reset data | Sinyal kayıpsa data resetleniyor
   }
-      input_YAW = map(data.yaw,      15, 255, 990, 2000);     // pin D5 (PWM signal)
-      input_PITCH = map(data.pitch,    15, 255, 990, 2000);     // pin D3 (PWM signal)
-      input_THROTTLE = map(data.throttle, 15, 255, 990, 2000);     // pin D4 (PWM signal)
-      input_ROLL = map(data.roll,     15, 255, 990, 2000);     // pin D2 (PWM signal)
+  int input_YAW = map(data.yaw,      15, 255, 990, 2000);     // pin D5 (PWM signal)
+  int input_PITCH = map(data.pitch,    15, 255, 990, 2000);     // pin D3 (PWM signal)
+  int input_THROTTLE = map(data.throttle, 15, 255, 990, 2000);     // pin D4 (PWM signal)
+  int input_ROLL = map(data.roll,     15, 255, 990, 2000);     // pin D2 (PWM signal)
   int ch_width_5 = map(data.aux1,     15, 255, 990, 2000);     // pin D6 (PWM signal)
   int ch_width_6 = map(data.aux2,     15, 255, 990, 2000);     // pin D7 (PWM signal)
   
 
 
 
-
-
-
   //////////////////////////////////////Gyro read/////////////////////////////////////
-  timePrev = time;  // the previous time is stored before the actual time read
-  time = millis();  // actual time read
-  elapsedTime = (time - timePrev) / 1000;    
-
-
-  
   Wire.beginTransmission(0x68);            //begin, Send the slave adress (in this case 68) 
   Wire.write(0x43);                        //First adress of the Gyro data
   Wire.endTransmission(false);
@@ -405,8 +389,8 @@ Finnaly we multiply the result by the derivate constant*/
 roll_pid_d = roll_kd*((roll_error - roll_previous_error)/elapsedTime);
 pitch_pid_d = pitch_kd*((pitch_error - pitch_previous_error)/elapsedTime);
 /*The final PID values is the sum of each of this 3 parts*/
-pitch_PID = roll_pid_p + roll_pid_i + roll_pid_d;
-roll_PID = pitch_pid_p + pitch_pid_i + pitch_pid_d;
+roll_PID = roll_pid_p + roll_pid_i + roll_pid_d;
+pitch_PID = pitch_pid_p + pitch_pid_i + pitch_pid_d;
 /*We know taht the min value of PWM signal is 1000us and the max is 2000. So that
 tells us that the PID value can/s oscilate more than -1000 and 1000 because when we
 have a value of 2000us the maximum value taht we could substract is 1000 and when
@@ -414,36 +398,25 @@ we have a value of 1000us for the PWM signal, the maximum value that we could ad
 to reach the maximum 2000us. But we don't want to act over the entire range so -+400 should be enough*/
 if(roll_PID < -400){roll_PID=-400;}
 if(roll_PID > 400) {roll_PID=400; }
-if(pitch_PID < -400){pitch_PID=-400;}
+if(pitch_PID < -4000){pitch_PID=-400;}
 if(pitch_PID > 400) {pitch_PID=400;}
 
 /*Finnaly we calculate the PWM width. We sum the desired throttle and the PID value*/
-//pwm_R_F  = 115 + input_THROTTLE - roll_PID - pitch_PID;
-//pwm_R_B  = 115 + input_THROTTLE - roll_PID + pitch_PID;
-//pwm_L_B  = 115 + input_THROTTLE + roll_PID + pitch_PID;
-//pwm_L_F  = 115 + input_THROTTLE + roll_PID - pitch_PID;
+pwm_R_F  = 115 + input_THROTTLE - roll_PID - pitch_PID;
+pwm_R_B  = 115 + input_THROTTLE - roll_PID + pitch_PID;
+pwm_L_B  = 115 + input_THROTTLE + roll_PID + pitch_PID;
+pwm_L_F  = 115 + input_THROTTLE + roll_PID - pitch_PID;
 
-pwm_R_F  = 115 + input_THROTTLE + roll_PID + pitch_PID;
-pwm_R_B  = 115 + input_THROTTLE + roll_PID - pitch_PID;
-pwm_L_B  = 115+ input_THROTTLE - roll_PID - pitch_PID;
-pwm_L_F  = 115 + input_THROTTLE - roll_PID + pitch_PID;
 
-// Serial.print("   |   ");
-// Serial.print("roll: ");
-// Serial.print(roll_PID);
-// Serial.print("   |   ");
-// Serial.print("pitch: ");
-// Serial.print(pitch_PID);
-// Serial.println("\n");
 
 /*Once again we map the PWM values to be sure that we won't pass the min
 and max values. Yes, we've already maped the PID values. But for example, for 
 throttle value of 1300, if we sum the max PID value we would have 2300us and
 that will mess up the ESC.*/
 //Right front
-if(pwm_R_F < 1000)
+if(pwm_R_F < 1100)
 {
-  pwm_R_F= 1000;
+  pwm_R_F= 1100;
 }
 if(pwm_R_F > 2000)
 {
@@ -451,9 +424,9 @@ if(pwm_R_F > 2000)
 }
 
 //Left front
-if(pwm_L_F < 1000)
+if(pwm_L_F < 1100)
 {
-  pwm_L_F= 1000;
+  pwm_L_F= 1100;
 }
 if(pwm_L_F > 2000)
 {
@@ -461,9 +434,9 @@ if(pwm_L_F > 2000)
 }
 
 //Right back
-if(pwm_R_B < 1000)
+if(pwm_R_B < 1100)
 {
-  pwm_R_B= 1000;
+  pwm_R_B= 1100;
 }
 if(pwm_R_B > 2000)
 {
@@ -471,9 +444,9 @@ if(pwm_R_B > 2000)
 }
 
 //Left back
-if(pwm_L_B < 1000)
+if(pwm_L_B < 1100)
 {
-  pwm_L_B= 1000;
+  pwm_L_B= 1100;
 }
 if(pwm_L_B > 2000)
 {
@@ -513,56 +486,63 @@ pitch_previous_error = pitch_error; //Remember to store the previous error.
 
 /*now we can write the values PWM to the ESCs only if the motor is activated
 */
-esc_Front_Left.writeMicroseconds(pwm_L_F); 
+
+  if(armed==1)
+  {
+  esc_Front_Left.writeMicroseconds(pwm_L_F); 
   esc_Rear_Left.writeMicroseconds(pwm_L_B);
   esc_Front_Right.writeMicroseconds(pwm_R_F); 
   esc_Rear_Right.writeMicroseconds(pwm_R_B);
-//  if(mot_activated)
-//  {
-//  esc_Front_Left.writeMicroseconds(pwm_L_F); 
-//  esc_Rear_Left.writeMicroseconds(pwm_L_B);
-//  esc_Front_Right.writeMicroseconds(pwm_R_F); 
-//  esc_Rear_Right.writeMicroseconds(pwm_R_B);
-//  }
-//  if(!mot_activated)
-//  {
-//    esc_Front_Left.writeMicroseconds(1000); 
-//    esc_Rear_Left.writeMicroseconds(1000);
-//    esc_Front_Right.writeMicroseconds(1000); 
-//    esc_Rear_Right.writeMicroseconds(1000);
-//  }
-
-  if(input_THROTTLE < 1100 && input_YAW > 1800 && !mot_activated)
-  {
-    if(activate_count==200)
-    {
-      mot_activated=1;   
-      //PORTB |= B00100000; //D13 LOW   
-      
-    }
-    activate_count=activate_count+1;
   }
-  if(!(input_THROTTLE < 1100 && input_YAW > 1800) && !mot_activated)
+  if(armed==0)
   {
-    activate_count=0;    
+    esc_Front_Left.writeMicroseconds(1000); 
+    esc_Rear_Left.writeMicroseconds(1000);
+    esc_Front_Right.writeMicroseconds(1000); 
+    esc_Rear_Right.writeMicroseconds(1000);
   }
 
-   if(input_THROTTLE < 1100 && input_YAW < 1100 && mot_activated)
+//  if(input_THROTTLE < 1100 && input_YAW > 1800 && !mot_activated)
+//  {
+//    if(activate_count==200)
+//    {
+//      mot_activated=1;   
+//      //PORTB |= B00100000; //D13 LOW   
+//      input_THROTTLE
+//      
+//    }
+//    activate_count=activate_count+1;
+//  }
+//  if(!(input_THROTTLE < 1100 && input_YAW > 1800) && !mot_activated)
+//  {
+//    activate_count=0;    
+//  }
+//
+//   if(input_THROTTLE < 1100 && input_YAW < 1100 && mot_activated)
+//  {
+//    if(des_activate_count==300)
+//    {
+//      mot_activated=0;       
+//      //PORTB &= B11011111; //D13 LOW   
+//      input_THROTTLE
+//    }
+//    des_activate_count=des_activate_count+1;
+//  }
+//  if(!(input_THROTTLE < 1100 && input_YAW < 1100) && mot_activated)
+//  {
+//    des_activate_count=0;
+//  }
+// 
+//}
+
+  if(input_THROTTLE <1000)
   {
-    if(des_activate_count==300)
-    {
-      mot_activated=0;       
-      //PORTB &= B11011111; //D13 LOW   
-    }
-    des_activate_count=des_activate_count+1;
+    armed=0;
   }
-  if(!(input_THROTTLE < 1100 && input_YAW < 1100) && mot_activated)
-  {
-    des_activate_count=0;
+  else{
+    armed =1;
   }
- 
 }
-
 
 
 

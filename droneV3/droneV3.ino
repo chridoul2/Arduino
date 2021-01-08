@@ -1,3 +1,5 @@
+ //#include <ac_float.h>
+
 //  6 Channel Receiver | 6 Kanal Alıcı
 //  PWM output on pins D2, D3, D4, D5, D6, D7 (Çıkış pinleri)
 #include <SPI.h>
@@ -5,12 +7,7 @@
 #include <RF24.h>
 #include <Servo.h>
 #include <Wire.h>
-int ch_width_1 = 0;
-int ch_width_2 = 0;
-int ch_width_3 = 0;
-int ch_width_4 = 0;
-int ch_width_5 = 0;
-int ch_width_6 = 0;
+
 Servo ch1;
 Servo ch2;
 Servo ch3;
@@ -31,7 +28,7 @@ RF24 radio(9, 10);
 void ResetData()
 {
   Serial.print("reset");
-   Serial.print("\n");
+  Serial.print("\n");
 
   // Define the inicial value of each data input. | Veri girişlerinin başlangıç değerleri
   // The middle position for Potenciometers. (254/2=127) | Potansiyometreler için orta konum
@@ -52,17 +49,16 @@ Servo esc_Rear_Left;
 Servo esc_Rear_Right;
 
 
-int pin_Front_Left = 2; // this is the output of the arduino
-int pin_Front_Right = 3; // this is the output of the arduino
-int pin_Rear_Left = 4; // this is the output of the arduino
-int pin_Rear_Right = 5; // this is the output of the arduino
-
-int led = 7;
+//int pin_Front_Left = 2; // this is the output of the arduino
+//int pin_Front_Right = 3; // this is the output of the arduino
+//int pin_Rear_Left = 4; // this is the output of the arduino
+//int pin_Rear_Right = 5; // this is the output of the arduino
 
 
-int potValue; // the potentiometer value
 
-int maxJoystickInfluence = 20; // the maximum influnce the joystick has over the motors . // must be lower than 180 // the higher this is , the more the drone will be able to tilt
+
+
+//short int maxJoystickInfluence = 20; // the maximum influnce the joystick has over the motors . // must be lower than 180 // the higher this is , the more the drone will be able to tilt
 //edn drone
 
 //Gyro values
@@ -78,13 +74,14 @@ float elapsedTime, time, timePrev;
 int i;
 float rad_to_deg = 180 / 3.141592654;
 
-float PID, pwmLeft, pwmRight, error, previous_error, error2, previous_error2, PID_2;
+float PID,error, previous_error, error2, previous_error2, PID_2;
 float PID_new = 0;
 float PID_2_new = 0;
 
-int count  = 0;
-int count_bool  = 0;
-float PID_table[100] = {};
+uint8_t count  = 0;
+uint8_t count_bool  = 0;
+float PID_table[200] = {};
+//float PID_2_table[200] = {};
 
 float pid_p = 0;
 float pid_i = 0;
@@ -93,17 +90,20 @@ float pid_p_2 = 0;
 float pid_i_2 = 0;
 float pid_d_2 = 0;
 /////////////////PID CONSTANTS/////////////////
-double kp = 3.0; //3.55
-double ki = 0.005; //0.003
-double kd = 0.05; //2.05
-
-double kp_2 = 3.0; //3.55
-double ki_2 = 0.002; //0.003
-double kd_2 = 0.0001; //2.05
+float kp = 3.55; //3.55
+float ki = 0.005; //0.003
+float kd = 0.05; //2.05
+//
+float kp_2 = 3.0; //3.55
+float ki_2 = 0.002; //0.003
+float kd_2 = 0.0001; //2.05
 ///////////////////////////////////////////////
 
 //double throttle = 1300; //initial value of throttle to the motors
-float desired_angle = 0; //This is the angle in which we whant the
+float desired_angle = 0;
+float desired_angle_2 = 0;
+  
+  //This is the angle in which we whant the
 //balance to stay steady
 //end gyro
 
@@ -131,16 +131,16 @@ void setup()
   radio.setPALevel(RF24_PA_HIGH);
   radio.startListening(); //start the radio comunication for receiver | Alıcı olarak sinyal iletişimi başlatılıyor
   pinMode(6, OUTPUT);
-  pinMode(led, OUTPUT);
+  pinMode(7, OUTPUT);
 
 
   //drone
 
 
-  esc_Front_Left.attach(pin_Front_Left); // (pin, min pulse width, max pulse width in microseconds)
-  esc_Front_Right.attach(pin_Front_Right); // (pin, min pulse width, max pulse width in microseconds)
-  esc_Rear_Left.attach(pin_Rear_Left); // (pin, min pulse width, max pulse width in microseconds)
-  esc_Rear_Right.attach(pin_Rear_Right); // (pin, min pulse width, max pulse width in microseconds)
+  esc_Front_Left.attach(2); // (pin, min pulse width, max pulse width in microseconds)
+  esc_Front_Right.attach(3); // (pin, min pulse width, max pulse width in microseconds)
+  esc_Rear_Left.attach(4); // (pin, min pulse width, max pulse width in microseconds)
+  esc_Rear_Right.attach(5); // (pin, min pulse width, max pulse width in microseconds)
   //  end drone
 
 
@@ -164,7 +164,10 @@ void setup()
   delay(7000); /*Give some delay, 7s, to have time to connect
                  the propellers and let everything start up*/
 
+
   //edn gyro
+
+
 
 
 
@@ -181,7 +184,7 @@ void recvData()
     lastRecvTime = millis();   // receive the data | data alınıyor
     //led
     if (radio.available()) {
-      digitalWrite(led, HIGH);
+      digitalWrite(7, HIGH);
     }
     else{
       esc_Front_Left.writeMicroseconds(1000);    // Send the signal to the ESC
@@ -201,12 +204,12 @@ void loop()
   if ( now - lastRecvTime > 1000 ) {
     ResetData(); // Signal lost.. Reset data | Sinyal kayıpsa data resetleniyor
   }
-  ch_width_4 = map(data.yaw,      15, 255, 990, 2000);     // pin D5 (PWM signal)
-  ch_width_2 = map(data.pitch,    15, 255, 990, 2000);     // pin D3 (PWM signal)
-  ch_width_3 = map(data.throttle, 15, 255, 990, 2000);     // pin D4 (PWM signal)
-  ch_width_1 = map(data.roll,     15, 255, 990, 2000);     // pin D2 (PWM signal)
-  ch_width_5 = map(data.aux1,     15, 255, 990, 2000);     // pin D6 (PWM signal)
-  ch_width_6 = map(data.aux2,     15, 255, 990, 2000);     // pin D7 (PWM signal)
+  int ch_width_4 = map(data.yaw,      15, 255, 990, 2000);     // pin D5 (PWM signal)
+  int ch_width_2 = map(data.pitch,    15, 255, 990, 2000);     // pin D3 (PWM signal)
+  int ch_width_3 = map(data.throttle, 15, 255, 990, 2000);     // pin D4 (PWM signal)
+  int ch_width_1 = map(data.roll,     15, 255, 990, 2000);     // pin D2 (PWM signal)
+  int ch_width_5 = map(data.aux1,     15, 255, 990, 2000);     // pin D6 (PWM signal)
+  int ch_width_6 = map(data.aux2,     15, 255, 990, 2000);     // pin D7 (PWM signal)
   // Write the PWM signal | PWM sinyaller çıkışlara gönderiliyor
   //  ch1.writeMicroseconds(ch_width_1);
   //  ch2.writeMicroseconds(ch_width_2);
@@ -218,7 +221,7 @@ void loop()
 
 
   //drone
-  potValue = map(data.throttle, 0 , 255, 1000, 1900);
+  int potValue = map(data.throttle, 0 , 255, 990, 2000);
 
   int speed_Front_Left = potValue;
   int speed_Front_Right = potValue;
@@ -226,8 +229,8 @@ void loop()
   int speed_Rear_Right = potValue;
 
 
-  int xValue = map(data.roll, 0, 255, -maxJoystickInfluence, maxJoystickInfluence);   // scale it to use it with the servo library (value between 0 and 180)
-  int yValue = map(data.pitch, 0, 255, maxJoystickInfluence, -maxJoystickInfluence);   // scale it to use it with the servo library (value between 0 and 180)
+  int xValue = map(data.roll, 0, 255, -20, 20);   // scale it to use it with the servo library (value between 0 and 180)
+  int yValue = map(data.pitch, 0, 255, 20, -20);   // scale it to use it with the servo library (value between 0 and 180)
 
   if (potValue > 1100) {
     if (xValue < 0)
@@ -350,9 +353,9 @@ void loop()
     part that afects the angles and ofcourse multiply by 0.98 */
 
   /*---X axis angle---*/
-  Total_angle[0] = 0.90 * (Total_angle[0] + Gyro_angle[0] * elapsedTime) + 0.1 * Acceleration_angle[0];
+  Total_angle[0] = 0.7 * (Total_angle[0] + Gyro_angle[0] * elapsedTime) + 0.3 * Acceleration_angle[0];
   /*---Y axis angle---*/
-  Total_angle[1] = 0.95 * (Total_angle[1] + Gyro_angle[1] * elapsedTime) + 0.05 * Acceleration_angle[1];
+  Total_angle[1] = 0.9 * (Total_angle[1] + Gyro_angle[1] * elapsedTime) + 0.1 * Acceleration_angle[1];
 
   /*Now we have our angles in degree and values from -10º0 to 100º aprox*/
 //      Serial.print("Total_angle[0]: ");
@@ -373,7 +376,7 @@ void loop()
   /*First calculate the error between the desired angle and
     the real measured angle*/
   error =  Total_angle[1] - desired_angle;
-  error2 = Total_angle[0] - desired_angle;
+  error2 = Total_angle[0] - desired_angle_2;
   /*Next the proportional value of the PID is just a proportional constant
     multiplied by the error*/
 
@@ -412,15 +415,20 @@ void loop()
   PID_2 = pid_p_2 + pid_i_2 + pid_d_2;
 
   
+  
+  
+
 
   
 
-  Serial.print("PID: ");
-      Serial.print(PID);
-      Serial.print("\t");
-      Serial.print("PID_2: ");
-      Serial.print(PID_2);
-      Serial.print("\n");
+  
+//
+//  Serial.print("PID: ");
+//      Serial.print(PID);
+//      Serial.print("\t");
+//      Serial.print("PID_2: ");
+//      Serial.print(PID_2);
+//      Serial.print("\n");
 
   /*We know taht the min value of PWM signal is 1000us and the max is 2000. So that
     tells us that the PID value can/s oscilate more than -1000 and 1000 because when we
@@ -445,25 +453,26 @@ void loop()
     PID_2 = 1000;
   }
 
+  
   /*Finnaly we calculate the PWM width. We sum the desired throttle and the PID value*/
 
 
 
 
 
-   speed_Rear_Left = speed_Rear_Left  - PID;
-   speed_Front_Left = speed_Front_Left - PID;
+   speed_Rear_Left = speed_Rear_Left  - (PID*5);
+   speed_Front_Left = speed_Front_Left - (PID*5);
 
-   speed_Rear_Right = speed_Rear_Right + PID;
-   speed_Front_Right = speed_Front_Right + PID ;
+   speed_Rear_Right = speed_Rear_Right + (PID*5);
+   speed_Front_Right = speed_Front_Right + (PID*50) ;
 
 
 
-   speed_Front_Right = speed_Front_Right - PID_2;
-   speed_Rear_Right = speed_Rear_Right + PID_2;
+   speed_Front_Right = speed_Front_Right - (PID_2*5);
+   speed_Rear_Right = speed_Rear_Right + (PID_2*5);
   
-   speed_Front_Left = speed_Front_Left - PID_2;
-   speed_Rear_Left = speed_Rear_Left + PID_2;
+   speed_Front_Left = speed_Front_Left - (PID_2*5);
+   speed_Rear_Left = speed_Rear_Left + (PID_2*5);
 
 
 
@@ -472,36 +481,36 @@ void loop()
     throttle value of 1300, if we sum the max PID value we would have 2300us and
     that will mess up the ESC.*/
   //Right
-  if (speed_Front_Right < 1000)
+  if (speed_Front_Right < 900)
   {
-    speed_Front_Right = 1000;
+    speed_Front_Right = 900;
   }
   if (speed_Front_Right > 2000)
   {
     speed_Front_Right = 2000;
   }
   //Left
-  if (speed_Front_Left < 1000)
+  if (speed_Front_Left < 900)
   {
-    speed_Front_Left = 1000;
+    speed_Front_Left = 900;
   }
   if (speed_Front_Left > 2000)
   {
     speed_Front_Left = 2000;
   }
 
-   if (speed_Rear_Right < 1000)
+   if (speed_Rear_Right < 900)
   {
-    speed_Rear_Right = 1000;
+    speed_Rear_Right = 900;
   }
   if (speed_Rear_Right > 2000)
   {
     speed_Rear_Right = 2000;
   }
   //Left
-  if (speed_Rear_Left < 1000)
+  if (speed_Rear_Left < 900)
   {
-    speed_Rear_Left = 1000;
+    speed_Rear_Left = 900;
   }
   if (speed_Rear_Left > 2000)
   {
@@ -543,33 +552,104 @@ void loop()
     width for each pulse*/
   //left_prop.writeMicroseconds(pwmLeft);
   //right_prop.writeMicroseconds(pwmRight);
-  previous_error = error; //Remember to store the previous error.
-  previous_error2 = error2;
+ 
+
+
+  //Serial.print(desired_angle);
+  //Serial.print("\n");
 
  
+  if(count==100)
+  {
+    count=0;
+  }
+
+  PID_table[count] =  PID;
+  PID_table[count+100] =  PID_2;
   
+  if(count== 99)
+    {
+      PID_new = PID;
+      for(int i = 0 ; i< 100 ; i++)
+      { 
+         
+        if(abs(PID_table[i]  -  PID_new) <3){
+           count_bool++;
+           //Serial.print(count_bool);
+           //Serial.print("\t");
+        }
+        PID_table[i] = 0;
+      }
+      if(count_bool == 100)
+      {
+        desired_angle=Total_angle[1];
+        error = 0;
+        PID=0;
+        
+      
+      }
+      count_bool  =0;  
+      
+      
+   }
+
+  if(count== 99)
+  {
+    PID_2_new = PID_2;
+    for(int i = 100 ; i< 200 ; i++)
+    { 
+       
+      if(abs(PID_table[i]  -  PID_2_new) <8){
+         count_bool++;
+         //Serial.print(count_bool);
+         //Serial.print("\t");
+      }
+      PID_table[i] = 0;
+    }
+    if(count_bool == 100)
+    {
+      desired_angle_2=Total_angle[0];
+      error2 = 0;
+      PID_2=0;
+      
+    
+    }
+    count_bool  =0;  
+    
+    
+ }
+
+  
+
    
+
+   count++;
+
+
+    previous_error = error; //Remember to store the previous error.
+  previous_error2 = error2;
     
   //end gyro
 
-
- esc_Front_Left.writeMicroseconds(speed_Front_Left);    // Send the signal to the ESC
+  
+  esc_Front_Left.writeMicroseconds(speed_Front_Left);    // Send the signal to the ESC
   esc_Front_Right.writeMicroseconds(speed_Front_Right);    // Send the signal to the ESC
   esc_Rear_Left.writeMicroseconds(speed_Rear_Left);    // Send the signal to the ESC
   esc_Rear_Right.writeMicroseconds(speed_Rear_Right);    // Send the signal to the ESC
-
-//    Serial.print("speed_Front_Left: ");
-//    Serial.print(speed_Front_Left);
-//    Serial.print("\t");
-//    Serial.print("speed_Front_Right: ");
-//    Serial.print(speed_Front_Right);
-//    Serial.print("\t");
-//    Serial.print("speed_Rear_Left: ");
-//    Serial.print(speed_Rear_Left);
-//    Serial.print("\t");
-//    Serial.print("speed_Rear_Right: ");
-//    Serial.print(speed_Rear_Right);
-//    Serial.print("\n");
+  
+  
+  Serial.print("speed_Front_Left: ");
+  Serial.print(speed_Front_Left);
+  Serial.print("\t");
+  Serial.print("speed_Front_Right: ");
+  Serial.print(speed_Front_Right);
+  Serial.print("\t");
+  Serial.print("speed_Rear_Left: ");
+  Serial.print(speed_Rear_Left);
+  Serial.print("\t");
+  Serial.print("speed_Rear_Right: ");
+  Serial.print(speed_Rear_Right);
+  Serial.print("\n");
 
 
 
